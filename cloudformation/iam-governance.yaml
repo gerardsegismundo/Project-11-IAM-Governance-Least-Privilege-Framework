@@ -1,0 +1,38 @@
+Resources:
+
+  CloudTrailLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: iam-governance-logs-${AWS::AccountId}
+
+  CloudTrailLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudTrailLogBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource:
+              Fn::Sub: ${CloudTrailLogBucket.Arn}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  IAMCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: IAMGovernanceTrail
+      S3BucketName: !Ref CloudTrailLogBucket
+
+      IsLogging: true
+
+      IncludeGlobalServiceEvents: true
+      IsMultiRegionTrail: true
+
+      EnableLogFileValidation: true
