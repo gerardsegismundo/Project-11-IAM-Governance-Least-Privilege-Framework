@@ -1,0 +1,59 @@
+Resources:
+
+  Project11Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: gerard-project11-${AWS::AccountId}
+
+  S3PermissionBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: S3PermissionBoundary
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+
+          # Only S3 permissions allowed
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource: "*"
+
+          # Explicit deny for IAM
+          - Effect: Deny
+            Action:
+              - iam:*
+            Resource: "*"
+
+  S3RestrictedReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: S3RestrictedReadRole
+
+      PermissionsBoundary:
+        Fn::Sub: arn:aws:iam::${AWS::AccountId}:policy/S3PermissionBoundary
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action: sts:AssumeRole
+
+      Policies:
+        - PolicyName: RestrictedS3ReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - Fn::GetAtt:
+                      - Project11Bucket
+                      - Arn
+                  - Fn::Sub: ${Project11Bucket.Arn}/*
