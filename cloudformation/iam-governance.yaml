@@ -3,9 +3,6 @@ Description: IAM Governance Framework - Role Based Access, Boundaries, STS, Clou
 
 Resources:
 
-  # =========================
-  # S3 BUCKET FOR CLOUDTRAIL
-  # =========================
   CloudTrailLogBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -30,9 +27,6 @@ Resources:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
 
-  # =========================
-  # IAM PERMISSION BOUNDARY
-  # =========================
   S3PermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -50,9 +44,6 @@ Resources:
               - iam:*
             Resource: "*"
 
-  # =========================
-  # IAM ROLE (RBAC + STS)
-  # =========================
   S3RestrictedReadRole:
     Type: AWS::IAM::Role
     Properties:
@@ -85,9 +76,6 @@ Resources:
                       - Arn
                   - Fn::Sub: ${CloudTrailLogBucket.Arn}/*
 
-  # =========================
-  # CLOUDTRAIL (AUDIT LAYER)
-  # =========================
   IAMCloudTrail:
     Type: AWS::CloudTrail::Trail
     Properties:
@@ -99,9 +87,6 @@ Resources:
       IsMultiRegionTrail: true
       EnableLogFileValidation: true
 
-  # =========================
-  # IAM ACCESS ANALYZER
-  # =========================
   IAMAccessAnalyzer:
     Type: AWS::AccessAnalyzer::Analyzer
     Properties:
