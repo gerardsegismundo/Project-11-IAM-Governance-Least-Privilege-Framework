@@ -1,5 +1,11 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM Governance Framework - Role Based Access, Boundaries, STS, CloudTrail, Analyzer
+
 Resources:
 
+  # =========================
+  # S3 BUCKET FOR CLOUDTRAIL
+  # =========================
   CloudTrailLogBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -24,6 +30,64 @@ Resources:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
 
+  # =========================
+  # IAM PERMISSION BOUNDARY
+  # =========================
+  S3PermissionBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: S3PermissionBoundary
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource: "*"
+
+          - Effect: Deny
+            Action:
+              - iam:*
+            Resource: "*"
+
+  # =========================
+  # IAM ROLE (RBAC + STS)
+  # =========================
+  S3RestrictedReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: S3RestrictedReadRole
+
+      PermissionsBoundary:
+        Fn::Sub: arn:aws:iam::${AWS::AccountId}:policy/S3PermissionBoundary
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action: sts:AssumeRole
+
+      Policies:
+        - PolicyName: S3ReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - Fn::GetAtt:
+                      - CloudTrailLogBucket
+                      - Arn
+                  - Fn::Sub: ${CloudTrailLogBucket.Arn}/*
+
+  # =========================
+  # CLOUDTRAIL (AUDIT LAYER)
+  # =========================
   IAMCloudTrail:
     Type: AWS::CloudTrail::Trail
     Properties:
@@ -31,8 +95,15 @@ Resources:
       S3BucketName: !Ref CloudTrailLogBucket
 
       IsLogging: true
-
       IncludeGlobalServiceEvents: true
       IsMultiRegionTrail: true
-
       EnableLogFileValidation: true
+
+  # =========================
+  # IAM ACCESS ANALYZER
+  # =========================
+  IAMAccessAnalyzer:
+    Type: AWS::AccessAnalyzer::Analyzer
+    Properties:
+      AnalyzerName: IAMGovernanceAnalyzer
+      Type: ACCOUNT
